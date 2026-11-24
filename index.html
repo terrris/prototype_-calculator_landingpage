@@ -314,12 +314,11 @@
 
       <div class="network-res">
         <p class="group-title" id="netTitle">Вся сеть</p>
-        <div class="row"><span class="label">Выручка с динамическими ценами, за месяц</span><span class="value" id="rNetDyn">—</span></div>
         <div class="row"><span class="label">Доп. выручка за месяц</span><span class="value" id="rNetMonth">—</span></div>
         <div class="row strong"><span class="label">Доп. выручка за год</span><span class="value" id="rNetYear">—</span></div>
       </div>
 
-      <p class="note">Ориентировочный расчёт: наценка применяется ко всему объёму рабочих дней с повышенным спросом, при этом объем продаж неизменный. Реальный эффект зависит от вашего бизнеса и проверяется на пилоте.</p>
+      <p class="note">Ориентировочный расчёт: наценка применяется ко всему объёму рабочих дней с повышенным спросом, при этом объем продаж неизменный. Реальный эффект зависит от вашего бизнеса.</p>
     </section>
   </main>
 </div>
@@ -472,12 +471,11 @@
       var netMonth = totalExtra * factor;
       netTitle.textContent = 'Вся сеть · ' + fmtMoney.format(points) + ' ' + pluralPoints(points) +
         ' · ' + fmtMoney.format(shifts) + ' ' + pluralShifts(shifts) + ' в месяц';
-      document.getElementById('rNetDyn').textContent = money(totalDyn * factor);
       document.getElementById('rNetMonth').textContent = money(netMonth);
       document.getElementById('rNetYear').textContent = money(netMonth * 12);
     } else {
       netTitle.textContent = 'Вся сеть';
-      ['rNetDyn', 'rNetMonth', 'rNetYear'].forEach(function (id) {
+      ['rNetMonth', 'rNetYear'].forEach(function (id) {
         document.getElementById(id).textContent = '—';
       });
     }
