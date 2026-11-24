@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Калькулятор динамических цен — Orbita</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --text: #141a2b;
+    --muted: #5d6680;
+    --line: #e3e7f0;
+    --input-bg: #f8f9fc;
+    --accent: #3d5afe;
+    --accent-soft: #eef1ff;
+    --good: #0f9d58;
+    --good-soft: #e7f6ee;
+    --error: #d93025;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 24px 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header { margin-bottom: 18px; max-width: 860px; }
+  h1 {
+    font-size: 28px;
+    line-height: 1.2;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .lead { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 2px rgba(20, 26, 43, .05), 0 4px 16px rgba(20, 26, 43, .05);
+    padding: 18px;
+  }
+  .card h2 {
+    font-size: 15px;
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+
+  /* --- Таблица товаров --- */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    text-align: left;
+    padding: 0 6px 8px;
+    vertical-align: bottom;
+    line-height: 1.25;
+  }
+  th.num, td.num { text-align: right; }
+  td {
+    padding: 5px 6px;
+    border-top: 1px solid var(--line);
+    vertical-align: middle;
+  }
+  td.calc {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  td.calc.extra { color: var(--good); }
+  input {
+    font: inherit;
+    color: inherit;
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--input-bg);
+    outline: none;
+    transition: border-color .15s, background .15s;
+  }
+  input:focus { border-color: var(--accent); background: #fff; }
+  input.invalid { border-color: var(--error); background: #fff5f4; }
+  input[type=number] { text-align: right; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .col-name { min-width: 120px; }
+  .col-price { width: 92px; }
+  .col-pct { width: 132px; }
+  .col-qty { width: 92px; }
+  .pct-cell { display: flex; align-items: center; gap: 6px; }
+  .pct-cell input { width: 58px; flex: none; }
+  .pct-rub { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .del {
+    border: 0; background: none; color: var(--muted);
+    font-size: 18px; line-height: 1; cursor: pointer;
+    padding: 4px 6px; border-radius: 6px;
+  }
+  .del:hover { color: var(--error); background: #fff5f4; }
+  .del:disabled { visibility: hidden; }
+  .add {
+    margin-top: 8px;
+    border: 1px dashed var(--line);
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-weight: 500;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .add:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+  .network {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .btn {
+    font: inherit;
+    font-weight: 600;
+    font-size: 15px;
+    color: #fff;
+    background: var(--accent);
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 26px;
+    cursor: pointer;
+    transition: filter .15s, transform .05s;
+    white-space: nowrap;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: translateY(1px); }
+  .error-msg { color: var(--error); font-size: 12px; margin: 8px 0 0; min-height: 0; }
+  .error-msg:empty { display: none; }
+
+  /* --- Итоги --- */
+  .results .group-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+    margin: 0 0 6px;
+    font-weight: 600;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 7px 0;
+  }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row .label { color: var(--muted); }
+  .row .value { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 15px; }
+  .highlight {
+    background: var(--good-soft);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 10px 0 16px;
+  }
+  .highlight .label { color: #2d5a42; font-size: 13px; font-weight: 500; }
+  .highlight .big {
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--good);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+    margin: 2px 0 2px;
+  }
+  .highlight .pct { color: #2d5a42; font-size: 13px; }
+  .highlight .pct b { color: var(--good); }
+  .network-res { border-top: 1px solid var(--line); padding-top: 14px; }
+  .row.strong .value { color: var(--good); font-size: 17px; }
+  .note {
+    font-size: 11px;
+    color: var(--muted);
+    margin: 14px 0 0;
+    line-height: 1.45;
+  }
+  .flash { animation: flash .6s ease; }
+  @keyframes flash { from { box-shadow: 0 0 0 3px rgba(15, 157, 88, .35); } to { box-shadow: 0 0 0 3px rgba(15, 157, 88, 0); } }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; }
+    h1 { font-size: 24px; }
+  }
+  @media (max-width: 640px) {
+    .page { padding: 16px; }
+    h1 { font-size: 21px; }
+    .lead { font-size: 14px; }
+    .card { padding: 14px; }
+    .network { grid-template-columns: 1fr 1fr; }
+    .network .btn { grid-column: 1 / -1; width: 100%; }
+
+    /* Таблица превращается в карточки */
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 10px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+      position: relative;
+    }
+    tbody tr:first-child { border-top: 0; padding-top: 0; }
+    td { border: 0; padding: 0; }
+    td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 3px;
+      text-align: left;
+    }
+    td.cell-name { grid-column: 1 / -1; padding-right: 34px; }
+    td.cell-del { position: absolute; top: 12px; right: 0; width: auto; }
+    tbody tr:first-child td.cell-del { top: 0; }
+    td.cell-del::before { display: none; }
+    td.cell-del .del { margin-top: 16px; }
+    td.calc { text-align: left; }
+    .pct-cell input { width: 100%; flex: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Сколько дополнительной выручки принесут динамические цены</h1>
+    <p class="lead">Во время высокого спроса Orbita за секунды повышает цену на несколько процентов сразу на всех экранах сети. Подставьте свои цифры и посмотрите эффект для одной точки и для всей сети.</p>
+  </header>
+
+  <main class="layout">
+    <!-- Ввод данных -->
+    <section class="card" aria-labelledby="inputs-title">
+      <h2 id="inputs-title">Ваши данные · 1 точка, смена высокого спроса</h2>
+      <form id="calc" novalidate>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="col-name">Единица товара</th>
+                <th class="col-price num">Стоимость за единицу, ₽</th>
+                <th class="col-pct">Увеличение цены, % (₽)</th>
+                <th class="col-qty num">Продаж за смену, шт.</th>
+                <th class="num">Выручка за смену высокого спроса с учётом дин. цен, ₽</th>
+                <th class="num">Доп. выручка с дин. ценой, ₽</th>
+                <th aria-label="Удалить"></th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <button type="button" class="add" id="addRow">+ Добавить товар</button>
+
+        <div class="network">
+          <div class="field">
+            <label for="points">Количество точек продаж</label>
+            <input type="number" id="points" min="1" step="1" inputmode="numeric" value="10">
+          </div>
+          <div class="field">
+            <label for="shifts">Смен повышенного спроса в месяц</label>
+            <input type="number" id="shifts" min="1" step="1" inputmode="numeric" value="8">
+          </div>
+          <button type="submit" class="btn">Рассчитать</button>
+        </div>
+        <p class="error-msg" id="error" role="alert"></p>
+      </form>
+    </section>
+
+    <!-- Итоги -->
+    <section class="card results" aria-labelledby="results-title" aria-live="polite">
+      <h2 id="results-title">Итог расчёта</h2>
+
+      <p class="group-title">1 точка · 1 пиковая смена</p>
+      <div class="row"><span class="label">Выручка в пиковые смены</span><span class="value" id="rBase">—</span></div>
+      <div class="row"><span class="label">С динамическими ценами</span><span class="value" id="rDyn">—</span></div>
+
+      <div class="highlight" id="highlight">
+        <div class="label">Дополнительная выручка</div>
+        <div class="big" id="rExtra">—</div>
+        <div class="pct"><b id="rPct">—</b> к выручке пиковых смен</div>
+      </div>
+
+      <div class="network-res">
+        <p class="group-title" id="netTitle">Вся сеть</p>
+        <div class="row"><span class="label">Выручка с динамическими ценами, за месяц</span><span class="value" id="rNetDyn">—</span></div>
+        <div class="row"><span class="label">Доп. выручка за месяц</span><span class="value" id="rNetMonth">—</span></div>
+        <div class="row strong"><span class="label">Доп. выручка за год</span><span class="value" id="rNetYear">—</span></div>
+      </div>
+
+      <p class="note">Ориентировочный расчёт: наценка применяется ко всему объёму рабочих дней с повышенным спросом, при этом объем продаж неизменный. Реальный эффект зависит от вашего бизнеса и проверяется на пилоте.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // Тестовые данные из черновой таблицы
+  var DEFAULT_ROWS = [
+    { name: 'Лагер',      price: 110, pct: 8, qty: 250 },
+    { name: 'Пилснер',    price: 140, pct: 4, qty: 140 },
+    { name: 'Пшеничное',  price: 125, pct: 6, qty: 210 }
+  ];
+
+  var tbody = document.getElementById('rows');
+  var form = document.getElementById('calc');
+  var errorEl = document.getElementById('error');
+
+  var fmtMoney = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
+  var fmtPct = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+  function money(v) { return fmtMoney.format(round2(v)) + ' ₽'; }
+  function round2(v) { return Math.round(v * 100) / 100; }
+
+  function parseNum(input) {
+    var raw = String(input.value).replace(',', '.').trim();
+    if (raw === '') return NaN;
+    return Number(raw);
+  }
+
+  function setValid(input, ok) { input.classList.toggle('invalid', !ok); }
+
+  function pluralPoints(n) {
+    var m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return 'точка';
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'точки';
+    return 'точек';
+  }
+  function pluralShifts(n) {
+    var m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return 'смена';
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'смены';
+    return 'смен';
+  }
+
+  function createRow(data) {
+    data = data || { name: '', price: '', pct: '', qty: '' };
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="cell-name" data-label="Единица товара"><input type="text" class="f-name" placeholder="Название" aria-label="Единица товара"></td>' +
+      '<td class="num" data-label="Стоимость, ₽"><input type="number" class="f-price" min="0" step="any" inputmode="decimal" aria-label="Стоимость за единицу, ₽"></td>' +
+      '<td data-label="Увеличение, % (₽)"><div class="pct-cell"><input type="number" class="f-pct" min="0" step="any" inputmode="decimal" aria-label="Увеличение цены, %"><span class="pct-rub">(—)</span></div></td>' +
+      '<td class="num" data-label="Продаж за смену"><input type="number" class="f-qty" min="0" step="1" inputmode="numeric" aria-label="Продаж за смену, шт."></td>' +
+      '<td class="num calc" data-label="Выручка с дин. ценой"><span class="c-dyn">—</span></td>' +
+      '<td class="num calc extra" data-label="Доп. выручка"><span class="c-extra">—</span></td>' +
+      '<td class="cell-del"><button type="button" class="del" aria-label="Удалить строку" title="Удалить строку">×</button></td>';
+
+    tr.querySelector('.f-name').value = data.name;
+    tr.querySelector('.f-price').value = data.price;
+    tr.querySelector('.f-pct').value = data.pct;
+    tr.querySelector('.f-qty').value = data.qty;
+
+    tr.querySelector('.f-price').addEventListener('input', function () { updatePctRub(tr); });
+    tr.querySelector('.f-pct').addEventListener('input', function () { updatePctRub(tr); });
+    tr.querySelector('.del').addEventListener('click', function () {
+      tr.remove();
+      syncDeleteButtons();
+    });
+
+    updatePctRub(tr);
+    return tr;
+  }
+
+  // Надбавка в рублях рядом с процентом — обновляется сразу при вводе
+  function updatePctRub(tr) {
+    var price = parseNum(tr.querySelector('.f-price'));
+    var pct = parseNum(tr.querySelector('.f-pct'));
+    var out = tr.querySelector('.pct-rub');
+    if (isFinite(price) && isFinite(pct) && price >= 0 && pct >= 0) {
+      out.textContent = '(' + money(price * pct / 100) + ')';
+    } else {
+      out.textContent = '(—)';
+    }
+  }
+
+  function syncDeleteButtons() {
+    var rows = tbody.querySelectorAll('tr');
+    rows.forEach(function (r) { r.querySelector('.del').disabled = rows.length <= 1; });
+  }
+
+  function calculate() {
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+    var totalBase = 0, totalDyn = 0, totalExtra = 0;
+    var hasError = false;
+
+    rows.forEach(function (tr) {
+      var priceEl = tr.querySelector('.f-price');
+      var pctEl = tr.querySelector('.f-pct');
+      var qtyEl = tr.querySelector('.f-qty');
+      var price = parseNum(priceEl), pct = parseNum(pctEl), qty = parseNum(qtyEl);
+
+      var okPrice = isFinite(price) && price >= 0;
+      var okPct = isFinite(pct) && pct >= 0;
+      var okQty = isFinite(qty) && qty >= 0;
+      setValid(priceEl, okPrice); setValid(pctEl, okPct); setValid(qtyEl, okQty);
+
+      var dynEl = tr.querySelector('.c-dyn');
+      var extraEl = tr.querySelector('.c-extra');
+      if (!(okPrice && okPct && okQty)) {
+        hasError = true;
+        dynEl.textContent = '—';
+        extraEl.textContent = '—';
+        return;
+      }
+
+      var markup = price * pct / 100;          // надбавка, ₽
+      var base = price * qty;                  // выручка за смену высокого спроса
+      var dyn = (price + markup) * qty;        // с учётом динамических цен
+      var extra = dyn - base;                  // доп. выручка
+
+      totalBase += base; totalDyn += dyn; totalExtra += extra;
+      dynEl.textContent = money(dyn);
+      extraEl.textContent = money(extra);
+    });
+
+    var pointsEl = document.getElementById('points');
+    var shiftsEl = document.getElementById('shifts');
+    var points = parseNum(pointsEl), shifts = parseNum(shiftsEl);
+    var okPoints = isFinite(points) && points >= 1;
+    var okShifts = isFinite(shifts) && shifts >= 0;
+    setValid(pointsEl, okPoints); setValid(shiftsEl, okShifts);
+    if (!okPoints || !okShifts) hasError = true;
+
+    errorEl.textContent = hasError
+      ? 'Проверьте выделенные поля: значения не могут быть отрицательными, точек продаж — минимум 1. Строки с ошибками не учитываются в итогах.'
+      : '';
+
+    // 1 точка, 1 пиковая смена
+    document.getElementById('rBase').textContent = money(totalBase);
+    document.getElementById('rDyn').textContent = money(totalDyn);
+    document.getElementById('rExtra').textContent = (totalExtra > 0 ? '+' : '') + money(totalExtra);
+    var pct = totalBase > 0 ? totalExtra / totalBase * 100 : 0;
+    document.getElementById('rPct').textContent = (pct > 0 ? '+' : '') + fmtPct.format(pct) + '%';
+
+    // Сеть: точки × пиковые смены в месяц
+    var netTitle = document.getElementById('netTitle');
+    if (okPoints && okShifts) {
+      var factor = points * shifts;
+      var netMonth = totalExtra * factor;
+      netTitle.textContent = 'Вся сеть · ' + fmtMoney.format(points) + ' ' + pluralPoints(points) +
+        ' · ' + fmtMoney.format(shifts) + ' ' + pluralShifts(shifts) + ' в месяц';
+      document.getElementById('rNetDyn').textContent = money(totalDyn * factor);
+      document.getElementById('rNetMonth').textContent = money(netMonth);
+      document.getElementById('rNetYear').textContent = money(netMonth * 12);
+    } else {
+      netTitle.textContent = 'Вся сеть';
+      ['rNetDyn', 'rNetMonth', 'rNetYear'].forEach(function (id) {
+        document.getElementById(id).textContent = '—';
+      });
+    }
+
+    var hl = document.getElementById('highlight');
+    hl.classList.remove('flash'); void hl.offsetWidth; hl.classList.add('flash');
+  }
+
+  document.getElementById('addRow').addEventListener('click', function () {
+    var tr = createRow();
+    tbody.appendChild(tr);
+    syncDeleteButtons();
+    tr.querySelector('.f-name').focus();
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    calculate();
+  });
+
+  DEFAULT_ROWS.forEach(function (r) { tbody.appendChild(createRow(r)); });
+  syncDeleteButtons();
+  calculate(); // показываем пример сразу при загрузке
+})();
+</script>
+</body>
+</html>
