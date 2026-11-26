@@ -105,11 +105,12 @@
   input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .col-name { min-width: 120px; }
   .col-price { width: 92px; }
-  .col-pct { width: 132px; }
+  .col-pct { width: 176px; }
   .col-qty { width: 92px; }
   .pct-cell { display: flex; align-items: center; gap: 6px; }
-  .pct-cell input { width: 58px; flex: none; }
-  .pct-rub { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .pct-cell input { width: 54px; flex: none; padding-left: 6px; padding-right: 6px; }
+  .pct-cell .unit { color: var(--muted); font-size: 12px; margin-left: -3px; }
+  .pct-cell .eq { color: var(--muted); font-size: 12px; }
   .del {
     border: 0; background: none; color: var(--muted);
     font-size: 18px; line-height: 1; cursor: pointer;
@@ -249,7 +250,7 @@
     td.cell-del::before { display: none; }
     td.cell-del .del { margin-top: 16px; }
     td.calc { text-align: left; }
-    .pct-cell input { width: 100%; flex: 1; }
+    .pct-cell input { width: auto; flex: 1; min-width: 0; }
   }
 </style>
 </head>
@@ -271,7 +272,7 @@
               <tr>
                 <th class="col-name">Единица товара</th>
                 <th class="col-price num">Стоимость за единицу, ₽</th>
-                <th class="col-pct">Увеличение цены, % (₽)</th>
+                <th class="col-pct">Увеличение цены, % или ₽</th>
                 <th class="col-qty num">Продаж за смену, л.</th>
                 <th class="num">Выручка с дин. ценой, ₽</th>
                 <th class="num">Доп. выручка с дин. ценой, ₽</th>
@@ -371,7 +372,11 @@
     tr.innerHTML =
       '<td class="cell-name" data-label="Единица товара"><input type="text" class="f-name" placeholder="Название" aria-label="Единица товара"></td>' +
       '<td class="num" data-label="Стоимость за единицу, ₽"><input type="number" class="f-price" min="0" step="any" inputmode="decimal" aria-label="Стоимость за единицу, ₽"></td>' +
-      '<td data-label="Увеличение цены, % (₽)"><div class="pct-cell"><input type="number" class="f-pct" min="0" step="any" inputmode="decimal" aria-label="Увеличение цены, %"><span class="pct-rub">(—)</span></div></td>' +
+      '<td data-label="Увеличение цены, % или ₽"><div class="pct-cell">' +
+        '<input type="number" class="f-pct" min="0" step="any" inputmode="decimal" aria-label="Увеличение цены, %"><span class="unit">%</span>' +
+        '<span class="eq">=</span>' +
+        '<input type="number" class="f-rub" min="0" step="any" inputmode="decimal" aria-label="Увеличение цены, ₽"><span class="unit">₽</span>' +
+      '</div></td>' +
       '<td class="num" data-label="Продаж за смену, л."><input type="number" class="f-qty" min="0" step="1" inputmode="numeric" aria-label="Продаж за смену, л."></td>' +
       '<td class="num calc" data-label="Выручка с дин. ценой, ₽"><span class="c-dyn">—</span></td>' +
       '<td class="num calc extra" data-label="Доп. выручка с дин. ценой, ₽"><span class="c-extra">—</span></td>' +
@@ -382,27 +387,43 @@
     tr.querySelector('.f-pct').value = data.pct;
     tr.querySelector('.f-qty').value = data.qty;
 
-    tr.querySelector('.f-price').addEventListener('input', function () { updatePctRub(tr); });
-    tr.querySelector('.f-pct').addEventListener('input', function () { updatePctRub(tr); });
+    tr.dataset.mode = 'pct'; // какое поле наценки пользователь менял последним: 'pct' или 'rub'
+    tr.querySelector('.f-price').addEventListener('input', function () { syncMarkup(tr); });
+    tr.querySelector('.f-pct').addEventListener('input', function () { tr.dataset.mode = 'pct'; syncMarkup(tr); });
+    tr.querySelector('.f-rub').addEventListener('input', function () { tr.dataset.mode = 'rub'; syncMarkup(tr); });
     tr.querySelector('.del').addEventListener('click', function () {
       tr.remove();
       syncDeleteButtons();
     });
 
-    updatePctRub(tr);
+    syncMarkup(tr);
     return tr;
   }
 
-  // Надбавка в рублях рядом с процентом — обновляется сразу при вводе
-  function updatePctRub(tr) {
+  // Наценку можно задать в % или в ₽: второе поле пересчитывается сразу при вводе.
+  // При смене стоимости сохраняется то, что пользователь вводил сам (% или ₽).
+  function syncMarkup(tr) {
     var price = parseNum(tr.querySelector('.f-price'));
-    var pct = parseNum(tr.querySelector('.f-pct'));
-    var out = tr.querySelector('.pct-rub');
-    if (isFinite(price) && isFinite(pct) && price >= 0 && pct >= 0) {
-      out.textContent = '(' + money(price * pct / 100) + ')';
+    var pctEl = tr.querySelector('.f-pct');
+    var rubEl = tr.querySelector('.f-rub');
+    var okPrice = isFinite(price) && price >= 0;
+    if (tr.dataset.mode === 'rub') {
+      var rub = parseNum(rubEl);
+      pctEl.value = okPrice && price > 0 && isFinite(rub) && rub >= 0 ? String(round2(rub / price * 100)) : '';
     } else {
-      out.textContent = '(—)';
+      var pct = parseNum(pctEl);
+      rubEl.value = okPrice && isFinite(pct) && pct >= 0 ? String(round2(price * pct / 100)) : '';
     }
+  }
+
+  // Надбавка в ₽ для расчёта: берётся из того поля, которое пользователь вводил сам
+  function readMarkup(tr, price) {
+    if (tr.dataset.mode === 'rub') {
+      var rub = parseNum(tr.querySelector('.f-rub'));
+      return { el: tr.querySelector('.f-rub'), ok: isFinite(rub) && rub >= 0, value: rub };
+    }
+    var pct = parseNum(tr.querySelector('.f-pct'));
+    return { el: tr.querySelector('.f-pct'), ok: isFinite(pct) && pct >= 0, value: price * pct / 100 };
   }
 
   function syncDeleteButtons() {
@@ -417,14 +438,15 @@
 
     rows.forEach(function (tr) {
       var priceEl = tr.querySelector('.f-price');
-      var pctEl = tr.querySelector('.f-pct');
       var qtyEl = tr.querySelector('.f-qty');
-      var price = parseNum(priceEl), pct = parseNum(pctEl), qty = parseNum(qtyEl);
+      var price = parseNum(priceEl), qty = parseNum(qtyEl);
 
       var okPrice = isFinite(price) && price >= 0;
-      var okPct = isFinite(pct) && pct >= 0;
+      var mk = readMarkup(tr, price);
+      var okPct = mk.ok;
       var okQty = isFinite(qty) && qty >= 0;
-      setValid(priceEl, okPrice); setValid(pctEl, okPct); setValid(qtyEl, okQty);
+      setValid(tr.querySelector('.f-pct'), true); setValid(tr.querySelector('.f-rub'), true);
+      setValid(priceEl, okPrice); setValid(mk.el, okPct); setValid(qtyEl, okQty);
 
       var dynEl = tr.querySelector('.c-dyn');
       var extraEl = tr.querySelector('.c-extra');
@@ -435,7 +457,7 @@
         return;
       }
 
-      var markup = price * pct / 100;          // надбавка, ₽
+      var markup = mk.value;                   // надбавка, ₽
       var base = price * qty;                  // выручка за смену высокого спроса
       var dyn = (price + markup) * qty;        // с учётом динамических цен
       var extra = dyn - base;                  // доп. выручка
