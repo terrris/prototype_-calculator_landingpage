@@ -94,9 +94,6 @@
   .seg button[aria-pressed="true"] { background: #fff; color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(20,26,43,.1); }
 
   .mode-panel[hidden] { display: none; }
-  .liters-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; }
-  .liters-grid .times { color: var(--muted); }
-  .liters-grid input { width: 100%; }
   .derived { color: var(--muted); font-size: 12px; margin-top: 6px; font-variant-numeric: tabular-nums; }
   .derived b { color: var(--text); }
 
@@ -202,7 +199,6 @@
           <span class="step-label" id="revLabel">Выручка одной точки за пиковую смену</span>
           <div class="seg" role="group" aria-label="Способ ввода выручки">
             <button type="button" data-mode="revenue" aria-pressed="true">Знаю выручку</button>
-            <button type="button" data-mode="liters" aria-pressed="false">Литры × цена</button>
             <button type="button" data-mode="products" aria-pressed="false">По товарам</button>
           </div>
         </div>
@@ -212,15 +208,6 @@
             <input type="text" inputmode="numeric" class="num big-input" id="revenue" value="73 350" aria-labelledby="revLabel">
             <span class="unit">₽</span>
           </div>
-        </div>
-
-        <div class="mode-panel" data-panel="liters" hidden>
-          <div class="liters-grid">
-            <div class="with-unit"><input type="text" inputmode="decimal" class="num" id="liters" value="600" aria-label="Литров за пиковую смену"><span class="unit">л</span></div>
-            <span class="times">×</span>
-            <div class="with-unit"><input type="text" inputmode="decimal" class="num" id="avgPrice" value="122,25" aria-label="Средняя цена литра, ₽"><span class="unit">₽/л</span></div>
-          </div>
-          <div class="derived">Выручка за смену: <b id="litersRevenue">—</b></div>
         </div>
 
         <div class="mode-panel" data-panel="products" hidden>
@@ -372,12 +359,6 @@
     if (mode === 'revenue') {
       return { revenue: check($('revenue'), 0), avgPrice: NaN };
     }
-    if (mode === 'liters') {
-      var l = check($('liters'), 0), p = check($('avgPrice'), 0);
-      var rev = l * p;
-      $('litersRevenue').textContent = isFinite(rev) ? money(rev) : '—';
-      return { revenue: rev, avgPrice: p };
-    }
     var sum = 0, liters = 0, ok = true;
     prodRows.querySelectorAll('tr').forEach(function (tr) {
       var price = check(tr.querySelector('.p-price'), 0);
@@ -482,7 +463,7 @@
 
   // Любой ввод в поля — сразу пересчёт; выручку красиво форматируем при выходе из поля
   document.querySelector('.layout').addEventListener('input', function (e) {
-    if (e.target.matches('#revenue, #liters, #avgPrice, #points, #shifts, .p-price, .p-qty')) recalc();
+    if (e.target.matches('#revenue, #points, #shifts, .p-price, .p-qty')) recalc();
   });
   $('revenue').addEventListener('blur', function () {
     var v = parse(this); if (isFinite(v)) this.value = fmtInt.format(v);
