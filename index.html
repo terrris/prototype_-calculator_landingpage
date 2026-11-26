@@ -370,11 +370,11 @@
     var tr = document.createElement('tr');
     tr.innerHTML =
       '<td class="cell-name" data-label="Единица товара"><input type="text" class="f-name" placeholder="Название" aria-label="Единица товара"></td>' +
-      '<td class="num" data-label="Стоимость, ₽"><input type="number" class="f-price" min="0" step="any" inputmode="decimal" aria-label="Стоимость за единицу, ₽"></td>' +
-      '<td data-label="Увеличение, % (₽)"><div class="pct-cell"><input type="number" class="f-pct" min="0" step="any" inputmode="decimal" aria-label="Увеличение цены, %"><span class="pct-rub">(—)</span></div></td>' +
+      '<td class="num" data-label="Стоимость за единицу, ₽"><input type="number" class="f-price" min="0" step="any" inputmode="decimal" aria-label="Стоимость за единицу, ₽"></td>' +
+      '<td data-label="Увеличение цены, % (₽)"><div class="pct-cell"><input type="number" class="f-pct" min="0" step="any" inputmode="decimal" aria-label="Увеличение цены, %"><span class="pct-rub">(—)</span></div></td>' +
       '<td class="num" data-label="Продаж за смену, л."><input type="number" class="f-qty" min="0" step="1" inputmode="numeric" aria-label="Продаж за смену, л."></td>' +
       '<td class="num calc" data-label="Выручка с дин. ценой, ₽"><span class="c-dyn">—</span></td>' +
-      '<td class="num calc extra" data-label="Доп. выручка"><span class="c-extra">—</span></td>' +
+      '<td class="num calc extra" data-label="Доп. выручка с дин. ценой, ₽"><span class="c-extra">—</span></td>' +
       '<td class="cell-del"><button type="button" class="del" aria-label="Удалить строку" title="Удалить строку">×</button></td>';
 
     tr.querySelector('.f-name').value = data.name;
