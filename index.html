@@ -144,25 +144,25 @@
 
   /* --- Итоги --- */
   .results { position: sticky; top: 16px; }
-  .loss {
-    background: var(--good-soft); border-radius: 12px; padding: 16px 18px; margin: 10px 0 14px;
-  }
-  .loss .label { color: var(--good-ink); font-size: 13px; font-weight: 500; }
-  .loss .big {
-    font-size: 34px; font-weight: 700; color: var(--good);
-    font-variant-numeric: tabular-nums; line-height: 1.15; margin: 4px 0;
-  }
-  .loss .sub { color: var(--good-ink); font-size: 13px; }
+  .results h2 { margin-bottom: 12px; }
   .group-title {
     font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
-    margin: 0 0 4px; font-weight: 600;
+    margin: 0 0 6px; font-weight: 600;
   }
   .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; }
   .row + .row { border-top: 1px solid var(--line); }
   .row .label { color: var(--muted); }
   .row .value { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 15px; }
-  .row.good .value { color: var(--good); }
-  .block + .block { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 12px; }
+  .highlight { background: var(--good-soft); border-radius: 12px; padding: 14px 16px; margin: 10px 0 16px; }
+  .highlight .label { color: var(--good-ink); font-size: 13px; font-weight: 500; }
+  .highlight .big {
+    font-size: 30px; font-weight: 700; color: var(--good);
+    font-variant-numeric: tabular-nums; line-height: 1.15; margin: 2px 0;
+  }
+  .highlight .pct { color: var(--good-ink); font-size: 13px; }
+  .highlight .pct b { color: var(--good); }
+  .network-res { border-top: 1px solid var(--line); padding-top: 14px; }
+  .row.strong .value { color: var(--good); font-size: 17px; }
   .note { font-size: 11px; color: var(--muted); margin: 14px 0 0; line-height: 1.45; }
 
   @media (max-width: 960px) {
@@ -176,7 +176,6 @@
     .lead { font-size: 14px; }
     .card { padding: 14px; }
     .pair { grid-template-columns: 1fr; gap: 14px; }
-    .loss .big { font-size: 28px; }
     .prod-table .c-price, .prod-table .c-qty { width: 72px; }
   }
 </style>
@@ -266,23 +265,20 @@
     <section class="card results" aria-labelledby="results-title" aria-live="polite">
       <h2 id="results-title">Итог расчёта</h2>
 
-      <div class="loss">
-        <div class="label">Без динамических цен вы теряете</div>
-        <div class="big" id="rYearShort">—</div>
-        <div class="sub" id="rYearSub">в год</div>
+      <p class="group-title">1 точка · 1 пиковая смена</p>
+      <div class="row"><span class="label">Выручка в пиковые смены</span><span class="value" id="rBase">—</span></div>
+      <div class="row"><span class="label">С динамическими ценами</span><span class="value" id="rDyn">—</span></div>
+
+      <div class="highlight">
+        <div class="label">Дополнительная выручка</div>
+        <div class="big" id="rExtra">—</div>
+        <div class="pct"><b id="rPct">—</b> к выручке пиковых смен</div>
       </div>
 
-      <div class="block">
-        <p class="group-title">1 точка · 1 пиковая смена</p>
-        <div class="row"><span class="label">Выручка в пиковые смены</span><span class="value" id="rBase">—</span></div>
-        <div class="row"><span class="label">С динамическими ценами</span><span class="value" id="rDyn">—</span></div>
-        <div class="row good"><span class="label">Дополнительная выручка</span><span class="value" id="rExtra">—</span></div>
-      </div>
-
-      <div class="block">
+      <div class="network-res">
         <p class="group-title" id="netTitle">Вся сеть</p>
         <div class="row"><span class="label">Доп. выручка за месяц</span><span class="value" id="rNetMonth">—</span></div>
-        <div class="row good"><span class="label">Доп. выручка за год</span><span class="value" id="rNetYear">—</span></div>
+        <div class="row strong"><span class="label">Доп. выручка за год</span><span class="value" id="rNetYear">—</span></div>
       </div>
 
       <p class="note">Ориентировочный расчёт: наценка применяется ко всему объёму рабочих дней с повышенным спросом, при этом объем продаж неизменный. Реальный эффект зависит от вашего бизнеса.</p>
@@ -308,10 +304,6 @@
   var mode = 'revenue';
 
   function money(v) { return fmt.format(Math.round(v * 100) / 100) + ' ₽'; }
-  function moneyShort(v) {
-    if (v >= 1e6) return fmt1.format(v / 1e6) + ' млн ₽';
-    return fmtInt.format(Math.round(v)) + ' ₽';
-  }
   function parse(input) {
     var raw = String(input.value).replace(/[\s ]/g, '').replace(',', '.');
     if (raw === '') return NaN;
@@ -382,9 +374,8 @@
   }
 
   function dash() {
-    ['rBase', 'rDyn', 'rExtra', 'rNetMonth', 'rNetYear', 'rYearShort'].forEach(function (id) { $(id).textContent = '—'; });
+    ['rBase', 'rDyn', 'rExtra', 'rPct', 'rNetMonth', 'rNetYear'].forEach(function (id) { $(id).textContent = '—'; });
     $('netTitle').textContent = 'Вся сеть';
-    $('rYearSub').textContent = 'в год';
   }
 
   // ---- Расчёт: при любом изменении ----
@@ -406,23 +397,20 @@
     var extra = base * pct / 100;
     $('rBase').textContent = money(base);
     $('rDyn').textContent = money(base + extra);
-    $('rExtra').textContent = '+' + money(extra) + ' (+' + fmt1.format(pct) + '%)';
+    $('rExtra').textContent = (extra > 0 ? '+' : '') + money(extra);
+    $('rPct').textContent = (pct > 0 ? '+' : '') + fmt1.format(pct) + '%';
 
     if (!isFinite(points) || !isFinite(shifts)) {
-      ['rNetMonth', 'rNetYear', 'rYearShort'].forEach(function (id) { $(id).textContent = '—'; });
+      ['rNetMonth', 'rNetYear'].forEach(function (id) { $(id).textContent = '—'; });
       $('netTitle').textContent = 'Вся сеть';
-      $('rYearSub').textContent = 'в год';
       return;
     }
     var month = extra * points * shifts;
-    var year = month * 12;
-    $('rNetMonth').textContent = '+' + money(month);
-    $('rNetYear').textContent = '+' + money(year);
-    $('rYearShort').textContent = '≈ ' + moneyShort(year);
-    var netText = fmtInt.format(points) + ' ' + plural(points, 'точка', 'точки', 'точек') + ' · ' +
-                  fmtInt.format(shifts) + ' ' + plural(shifts, 'пиковая смена', 'пиковые смены', 'пиковых смен') + ' в месяц';
-    $('netTitle').textContent = 'Вся сеть · ' + netText;
-    $('rYearSub').textContent = 'в год — ' + netText;
+    $('rNetMonth').textContent = money(month);
+    $('rNetYear').textContent = money(month * 12);
+    $('netTitle').textContent = 'Вся сеть · ' +
+      fmtInt.format(points) + ' ' + plural(points, 'точка', 'точки', 'точек') + ' · ' +
+      fmtInt.format(shifts) + ' ' + plural(shifts, 'смена', 'смены', 'смен') + ' в месяц';
   }
 
   // ---- События ----
