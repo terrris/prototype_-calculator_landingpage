@@ -111,35 +111,6 @@
   .pct-cell input { width: 54px; flex: none; padding-left: 6px; padding-right: 6px; }
   .pct-cell .unit { color: var(--muted); font-size: 12px; margin-left: -3px; }
   .pct-cell .eq { color: var(--muted); font-size: 12px; }
-  .bulk {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 10px;
-    background: var(--accent-soft);
-    border-radius: 10px;
-    padding: 8px 12px;
-    margin-bottom: 12px;
-  }
-  .bulk-title { font-size: 13px; font-weight: 500; margin-right: 2px; }
-  .bulk-field { display: inline-flex; align-items: center; gap: 4px; }
-  .bulk-field input { width: 64px; padding: 6px 8px; background: #fff; }
-  .bulk-field .unit, .bulk-or { color: var(--muted); font-size: 12px; }
-  .bulk-btn {
-    font: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--accent);
-    background: #fff;
-    border: 1px solid var(--accent);
-    border-radius: 8px;
-    padding: 6px 12px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .bulk-btn:hover { background: var(--accent); color: #fff; }
-  .bulk-hint { flex-basis: 100%; font-size: 12px; color: var(--muted); margin: 0; }
-  .bulk-hint:empty { display: none; }
   .del {
     border: 0; background: none; color: var(--muted);
     font-size: 18px; line-height: 1; cursor: pointer;
@@ -295,14 +266,6 @@
     <section class="card" aria-labelledby="inputs-title">
       <h2 id="inputs-title">Ваши данные · 1 точка, смена высокого спроса</h2>
       <form id="calc" novalidate>
-        <div class="bulk" role="group" aria-labelledby="bulk-title">
-          <span class="bulk-title" id="bulk-title">Единое увеличение цены для всех товаров:</span>
-          <span class="bulk-field"><input type="number" id="bulkPct" min="0" step="any" inputmode="decimal" placeholder="—" aria-label="Единое увеличение цены, %"><span class="unit">%</span></span>
-          <span class="bulk-or">или</span>
-          <span class="bulk-field"><input type="number" id="bulkRub" min="0" step="any" inputmode="decimal" placeholder="—" aria-label="Единое увеличение цены, ₽"><span class="unit">₽</span></span>
-          <button type="button" class="bulk-btn" id="bulkApply">Применить ко всем</button>
-          <p class="bulk-hint" id="bulkHint" aria-live="polite"></p>
-        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -548,39 +511,6 @@
     tbody.appendChild(tr);
     syncDeleteButtons();
     tr.querySelector('.f-name').focus();
-  });
-
-  // Единое увеличение цены: % или ₽ (заполняется одно из двух полей) применяется ко всем строкам
-  var bulkPct = document.getElementById('bulkPct');
-  var bulkRub = document.getElementById('bulkRub');
-  var bulkHint = document.getElementById('bulkHint');
-  bulkPct.addEventListener('input', function () { bulkRub.value = ''; setValid(bulkPct, true); setValid(bulkRub, true); bulkHint.textContent = ''; });
-  bulkRub.addEventListener('input', function () { bulkPct.value = ''; setValid(bulkPct, true); setValid(bulkRub, true); bulkHint.textContent = ''; });
-
-  function applyBulk() {
-    var useRub = String(bulkRub.value).trim() !== '';
-    var el = useRub ? bulkRub : bulkPct;
-    var v = parseNum(el);
-    if (!isFinite(v) || v < 0) {
-      setValid(el, false);
-      bulkHint.textContent = 'Введите неотрицательное число в поле % или ₽.';
-      return;
-    }
-    setValid(el, true);
-    var rows = tbody.querySelectorAll('tr');
-    rows.forEach(function (tr) {
-      tr.dataset.mode = useRub ? 'rub' : 'pct';
-      tr.querySelector(useRub ? '.f-rub' : '.f-pct').value = String(v);
-      syncMarkup(tr);
-    });
-    bulkHint.textContent = 'Применено ко всем товарам (' + rows.length + '). Нажмите «Рассчитать», чтобы обновить итоги.';
-  }
-
-  document.getElementById('bulkApply').addEventListener('click', applyBulk);
-  [bulkPct, bulkRub].forEach(function (inp) {
-    inp.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); applyBulk(); }
-    });
   });
 
   form.addEventListener('submit', function (e) {
